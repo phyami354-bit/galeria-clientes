@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>yami.ph · Galería</title>
+
+  <!-- JSZip para descargar todas las fotos -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: #000;
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .container {
+      width: 90%;
+      max-width: 1200px;
+      text-align: center;
+    }
+
+    h1 {
+      font-weight: 300;
+      letter-spacing: 4px;
+      margin-bottom: 1.5rem;
+    }
+
+    .upload-box {
+      border: 2px dashed #444;
+      padding: 3rem;
+      border-radius: 14px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    .upload-box:hover {
+      border-color: #888;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    .actions {
+      margin-top: 2rem;
+    }
+
+    button {
+      background: #111;
+      color: #fff;
+      border: 1px solid #444;
+      padding: 0.7rem 1.5rem;
+      border-radius: 30px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      border-color: #888;
+    }
+
+    .gallery {
+      margin-top: 3rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 1rem;
+    }
+
+    .gallery img {
+      width: 100%;
+      border-radius: 12px;
+      background: #111;
+    }
+
+    footer {
+      margin-top: 3rem;
+      font-size: 0.8rem;
+      color: #777;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>yami.ph</h1>
+
+    <label class="upload-box">
+      <p>Hacé clic para subir fotos</p>
+      <p style="font-size:0.9rem; color:#aaa;">Marca de agua y numeración automática</p>
+      <input type="file" id="fileInput" multiple accept="image/*">
+    </label>
+
+    <div class="actions">
+      <button id="downloadBtn">Descargar fotos con marca de agua</button>
+    </div>
+
+    <div class="gallery" id="gallery"></div>
+
+    <footer>
+      <p>Galería de selección · yami.ph</p>
+    </footer>
+  </div>
+
+<script>
+  const input = document.getElementById('fileInput');
+  const gallery = document.getElementById('gallery');
+  const downloadBtn = document.getElementById('downloadBtn');
+
+  const images = [];
+  let counter = 1;
+
+  input.addEventListener('change', () => {
+    [...input.files].forEach(file => applyWatermark(file));
+  });
+
+  function applyWatermark(file) {
+    const currentNumber = counter;
+    counter++;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.src = reader.result;
+
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+
+        canvas.width = img.width;
+        canvas.height = img.height;
+
+        ctx.drawImage(img, 0, 0);
+
+        // Marca de agua MÁS INTENSA
+        ctx.font = `${img.width / 3.8}px Arial`;
+        ctx.fillStyle = 'rgba(255,255,255,0.45)';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('yami.ph', img.width / 2, img.height / 2);
+
+        // Numeración debajo de la marca de agua
+        ctx.font = `${img.width / 18}px Arial`;
+        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+        ctx.fillText(`Foto ${currentNumber}`, img.width / 2, img.height / 2 + img.height / 8);
+
+        const result = canvas.toDataURL('image/jpeg');
+        showImage(result);
+      };
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function showImage(src) {
+    const img = document.createElement('img');
+    img.src = src;
+    gallery.appendChild(img);
+    images.push(src);
+  }
+
+  downloadBtn.addEventListener('click', async () => {
+    if (images.length === 0) {
+      alert('No hay fotos para descargar');
+      return;
+    }
+
+    const zip = new JSZip();
+
+    images.forEach((img, index) => {
+      const base64 = img.split(',')[1];
+      zip.file(`foto_${index + 1}.jpg`, base64, { base64: true });
+    });
+
+    const content = await zip.generateAsync({ type: 'blob' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(content);
+    a.download = 'fotos_yami_ph_numeradas.zip';
+    a.click();
+  });
+</script>
+
+</body>
+</html>
